@@ -6,3 +6,7 @@ dependencies = [
     "aiogram",
     "aiosqlite",
 ]
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
