@@ -3,8 +3,8 @@ import sqlite3
 def init_database(database_path: str) -> None:
 
     try:
-        with sqlite3.connect(database_path) as database:
-            cursor = database.cursor()
+        with sqlite3.connect(database_path) as db:
+            cursor = db.cursor()
 
             cursor.execute("PRAGMA foreign_keys = ON;")
 
@@ -45,7 +45,7 @@ def init_database(database_path: str) -> None:
                 )
             """)
 
-            database.commit()
+            db.commit()
 
     except sqlite3.Error as e:
         print(f"Error connecting to database: {e}")

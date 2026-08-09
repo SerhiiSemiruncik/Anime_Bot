@@ -51,3 +51,17 @@ class SQLiteAnimeCatalogRepository:
                     return Genre(id=genre_id, name=name)
             except sqlite3.Error:
                 raise
+
+    def add_genre_to_anime(self, anime_id: int, genre_id: int) -> None:
+
+        with sqlite3.connect(self.database_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA foreign_keys = ON;")
+            try:
+                cursor.execute(
+                    "INSERT OR IGNORE INTO anime_genres (anime_id, genre_id) VALUES (?, ?)",
+                    (anime_id, genre_id),
+                )
+                conn.commit()
+            except sqlite3.Error:
+                raise
