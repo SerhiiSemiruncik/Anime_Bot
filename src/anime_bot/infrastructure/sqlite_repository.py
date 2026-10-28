@@ -1,4 +1,5 @@
 import sqlite3
+from os import name
 
 from anime_bot.domain.entities import Anime, Genre, Episode
 
@@ -182,4 +183,39 @@ class SQLiteAnimeCatalogRepository:
                 episode_number=row[2],
                 telegram_channel_id=row[3],
                 telegram_message_id=row[4]
+            )
+
+    def get_anime_by_id(self, anime_id: int) -> Anime | None:
+
+        with sqlite3.connect(self.database_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT a.id, a.name, g.id, g.name
+                FROM anime AS a
+                LEFT JOIN anime_genres AS ag ON ag.anime_id = a.id
+                LEFT JOIN genres AS g ON g.id = ag.genre_id
+                WHERE a.id = ?
+                ORDER BY g.name ASC
+                """,
+                (anime_id,),
+            )
+
+            rows = cursor.fetchall()
+
+            if not rows:
+                return None
+
+            first_row = rows[0]
+
+            genres = tuple(
+                Genre(id=row[2], name=row[3])
+                for row in rows
+                if row[2] is not None
+            )
+
+            return Anime(
+                id=first_row[0],
+                name=first_row[1],
+                genres=genres,
             )
