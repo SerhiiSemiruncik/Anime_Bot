@@ -157,3 +157,29 @@ class SQLiteAnimeCatalogRepository:
                 )
                 for row in rows
             ]
+
+    def get_episode_by_id(self, episode_id: int) -> Episode | None:
+
+        with sqlite3.connect(self.database_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, anime_id, episode_number, telegram_channel_id, telegram_message_id
+                FROM episodes
+                WHERE id = ?
+                """,
+            (episode_id, ),
+            )
+
+            row = cursor.fetchone()
+
+            if row is None:
+                return None
+
+            return Episode(
+                id=row[0],
+                anime_id=row[1],
+                episode_number=row[2],
+                telegram_channel_id=row[3],
+                telegram_message_id=row[4]
+            )
