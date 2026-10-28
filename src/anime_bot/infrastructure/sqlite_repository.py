@@ -1,6 +1,7 @@
 import sqlite3
 
-from anime_bot.domain.entities import Anime, Genre
+from anime_bot.domain.entities import Anime, Genre, Episode
+
 
 class SQLiteAnimeCatalogRepository:
     def __init__(self, database_path: str) -> None:
@@ -39,13 +40,16 @@ class SQLiteAnimeCatalogRepository:
             cursor = conn.cursor()
             cursor.execute("PRAGMA foreign_keys = ON;")
             try:
-                cursor.execute("SELECT id, name FROM genres WHERE name = ?", (name,))
+                cursor.execute("SELECT id, name "
+                               "FROM genres "
+                               "WHERE name = ?", (name,))
                 row = cursor.fetchone()
                 if row:
                     genre_id, genre_name = row
                     return Genre(id=genre_id, name=genre_name)
                 else:
-                    cursor.execute("INSERT INTO genres (name) VALUES (?)", (name,))
+                    cursor.execute("INSERT INTO genres (name) "
+                                   "VALUES (?)", (name,))
                     genre_id = cursor.lastrowid
                     conn.commit()
                     return Genre(id=genre_id, name=name)
@@ -65,3 +69,91 @@ class SQLiteAnimeCatalogRepository:
                 conn.commit()
             except sqlite3.Error:
                 raise
+
+    def save_episode(
+        self,
+        anime_id: int,
+        episode_number: int,
+        telegram_channel_id: int,
+        telegram_message_id: int,
+    ) -> Episode:
+
+        with sqlite3.connect(self.database_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA foreign_keys = ON;")
+
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO episodes (
+                    anime_id,
+                    episode_number,
+                    telegram_channel_id,
+                    telegram_message_id
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    anime_id,
+                    episode_number,
+                    telegram_channel_id,
+                    telegram_message_id,
+                ),
+            )
+            conn.commit()
+
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    anime_id,
+                    episode_number,
+                    telegram_channel_id,
+                    telegram_message_id
+                FROM episodes
+                WHERE anime_id = ? AND episode_number = ?
+                """,
+                (anime_id, episode_number),
+            )
+            row = cursor.fetchone()
+
+            episode = Episode(
+                id=row[0],
+                anime_id=row[1],
+                episode_number=row[2],
+                telegram_channel_id=row[3],
+                telegram_message_id=row[4],
+            )
+
+            return episode
+
+    def get_episodes_by_anime_id(self, anime_id: int) -> list[Episode]:
+
+        with sqlite3.connect(self.database_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    anime_id,
+                    episode_number,
+                    telegram_channel_id,
+                    telegram_message_id
+                FROM episodes
+                WHERE anime_id = ?
+                ORDER BY episode_number ASC
+                """,
+                (anime_id,),
+            )
+
+            rows = cursor.fetchall()
+
+            return [
+                Episode(
+                    id=row[0],
+                    anime_id=row[1],
+                    episode_number=row[2],
+                    telegram_channel_id=row[3],
+                    telegram_message_id=row[4],
+                )
+                for row in rows
+            ]
